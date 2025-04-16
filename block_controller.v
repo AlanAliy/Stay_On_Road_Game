@@ -7,7 +7,8 @@ module block_controller(
 	input up, input down, input left, input right,
 	input [9:0] hCount, vCount,
 	output reg [11:0] rgb,
-	output reg [11:0] background
+	output reg [11:0] background,
+	output reg deadFlag = 0
    );
 	wire block_fill;
 	
@@ -18,23 +19,29 @@ module block_controller(
 
 	reg [9:0] delta; //change of curve;
 	
-	parameter RED   = 12'b1111_0000_0000;
-	parameter GREEN = 12'b0000_1111_0000;
-	parameter GRAY =  12'b0111_0111_0111;
-	parameter BLACK = 12'b0000_0000_0000;
+	localparam RED   = 12'b1111_0000_0000;
 	
-	parameter XCENTER = 10'd464;
-	parameter YCENTER = 10'd275;
+	localparam GREEN1 = 12'b0000_1111_0000;
+	localparam GREEN2 = 12'b0000_0101_0000;
+	localparam GREEN3 = 12'b0000_1010_0000;
+	
+	localparam GRAY1 =  12'b0110_0110_0110;
+	localparam GRAY2 =  12'b1001_1001_1001;
+	localparam GRAY3 =  12'b0100_0100_0100;
+	
+	localparam BLACK = 12'b0000_0000_0000;
+	
+	localparam XCENTER = 10'd464;
+	localparam YCENTER = 10'd275;
 
+    reg [2:0] road_hash;
+    reg [2:0] grass_hash;
 
 
 	//create tspeed, and  xrEdge, xlEdge, deathflag
 
-	reg [1:0] deadFlag = 0;
 	reg [5:0] tspeed = 2;
 	reg [12:0] dif_count = 0;
-
-
 
 
 	
@@ -48,10 +55,27 @@ module block_controller(
 			rgb = BLACK;
 		else if (block_fill) 
 			rgb = RED; 
-		else if (road_parts)
-			rgb = GRAY;
-		else
-			rgb=background;
+		else if (road_parts)begin
+			//!FIXME
+			//I put these hash cases here to see if I can make it generate different tones of colors
+			//semi randomly. For some reason they warp the image and colors making the green black? the gray seems
+			//to be fine but has much larger of a road than is meanr for it. when the car collides it understands and makes
+			// a set of pixels in that area black again?
+			//if you want the colors to work correctly you can undo this b deleteing the case statements
+      		case (road_hash)	
+
+        		3'd0, 3'd1: rgb = GRAY1;
+       			3'd2, 3'd3: rgb = GRAY2;
+        		default:    rgb = GRAY3;
+			endcase
+		end
+		else begin
+      		case (grass_hash)
+        		3'd0, 3'd1: background = GREEN2;
+        		3'd2, 3'd3: background = GREEN1;
+        		default:    background = GREEN3;
+      		endcase
+      	end
 	end
 		//the +-5 for the positions give the dimension of the block (i.e. it will be 10x10 pixels)
 	assign block_fill = vCount>=(ypos-5) && vCount<=(ypos+5) && hCount>=(xpos-5) && hCount<=(xpos+5);
@@ -68,7 +92,7 @@ module block_controller(
       end
       // reset car position and alive flag
       xpos     <= XCENTER;
-      ypos     <= YCENTER - 100;
+      ypos     <= YCENTER + 100;
       deadFlag <= 1'b0;
     end else begin
       // shift the road one row

@@ -21,6 +21,10 @@
 // Author: Yue (Julien) Niu
 // Description: Port from NEXYS3 to NEXYS4
 //////////////////////////////////////////////////////////////////////////////////
+
+//!FIXME  for some reason the deathflag doesn't get registered inside timer_display.v
+//I though maybe it was a synchronization error but I can't quiet understand why it is not working.
+//the timer itself works fine but the timer does not reset, nor does it set a pr when you die.
 module vga_top(
 	input ClkPort,
 	input BtnC,
@@ -28,6 +32,7 @@ module vga_top(
 	input BtnR,
 	input BtnL,
 	input BtnD,
+
 	//VGA signal
 	output hSync, vSync,
 	output [3:0] vgaR, vgaG, vgaB,
@@ -87,8 +92,12 @@ module vga_top(
 		.hCount(hc), 
 		.vCount(vc), 
 		.rgb(rgb), 
-		.background(background)
+		.background(background),
+		.deadFlag(deadFlag)
 	);
+	assign vgaR = rgb[11:8];
+  	assign vgaG = rgb[7:4];
+  	assign vgaB = rgb[3:0];
 	
 	wire[7:0] An, SSD_CATHODES;
 	timer_display td(

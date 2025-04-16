@@ -7,6 +7,19 @@ module timer_display(
   output reg[7:0] SSD_CATHODES         // {Ca,Cb,Cc,Cd,Ce,Cf,Cg,Dp}
 );
 
+  reg dead_s1, dead_s2; //double synchronize dead because of different clocks
+  always @(posedge clk or posedge rst) begin
+    if (rst) begin
+      dead_s1 <= 1'b0;
+      dead_s2 <= 1'b0;
+    end else begin
+      dead_s1 <= dead;
+      dead_s2 <= dead_s1;
+    end
+  end
+
+
+
 //this divider ticks at 100Mhz, 100 million times per second
 //I think I need this for accurate timing
 //I dont think it is a problem but it might be
@@ -34,9 +47,9 @@ module timer_display(
       best_centi <= 0;
     end 
 	
-	else if (dead) begin
+	else if (dead_s2) begin
       if (cur_centi > best_centi) 
-	  best_centi <= cur_centi;
+	    best_centi <= cur_centi;
       cur_centi <= 0;
     end 
 	
@@ -68,14 +81,15 @@ module timer_display(
   //turn SSDs on in turns
   always @(*) begin
     An = {
-      !(~ssdscan_clk[2] && ~ssdscan_clk[1] && ~ssdscan_clk[0]),
-      !(~ssdscan_clk[2] && ~ssdscan_clk[1] &&  ssdscan_clk[0]),
-      !(~ssdscan_clk[2] &&  ssdscan_clk[1] && ~ssdscan_clk[0]),
-      !(~ssdscan_clk[2] &&  ssdscan_clk[1] &&  ssdscan_clk[0]),
-      !(ssdscan_clk[2] && ~ssdscan_clk[1] && ~ssdscan_clk[0]),
-      !(ssdscan_clk[2] && ~ssdscan_clk[1] &&  ssdscan_clk[0]),
-      !(ssdscan_clk[2] &&  ssdscan_clk[1] && ~ssdscan_clk[0]),
-      !(ssdscan_clk[2] &&  ssdscan_clk[1] &&  ssdscan_clk[0])
+      
+      !(ssdscan_clk[2] &&  ssdscan_clk[1] &&  ssdscan_clk[0]),   //7
+      !(ssdscan_clk[2] &&  ssdscan_clk[1] && ~ssdscan_clk[0]),  //6
+      !(ssdscan_clk[2] && ~ssdscan_clk[1] &&  ssdscan_clk[0]),  //5
+      !(ssdscan_clk[2] && ~ssdscan_clk[1] && ~ssdscan_clk[0]),  //4
+      !(~ssdscan_clk[2] &&  ssdscan_clk[1] &&  ssdscan_clk[0]), //3
+      !(~ssdscan_clk[2] &&  ssdscan_clk[1] && ~ssdscan_clk[0]), //2 
+      !(~ssdscan_clk[2] && ~ssdscan_clk[1] &&  ssdscan_clk[0]), //1
+      !(~ssdscan_clk[2] && ~ssdscan_clk[1] && ~ssdscan_clk[0]) //0
       };
   end
 
