@@ -68,7 +68,7 @@ module vga_top(
 	end
 	wire move_clk;
 	assign move_clk=DIV_CLK[19]; //slower clock to drive the movement of objects on the vga screen
-	wire [11:0] background;
+
 	
 	
 	display_controller dc(
@@ -92,7 +92,6 @@ module vga_top(
 		.hCount(hc), 
 		.vCount(vc), 
 		.rgb(rgb), 
-		.background(background),
 		.deadFlag(deadFlag)
 	);
 	assign vgaR = rgb[11:8];

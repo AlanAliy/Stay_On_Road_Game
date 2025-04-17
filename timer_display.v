@@ -18,6 +18,17 @@ module timer_display(
     end
   end
 
+reg dead_sync_prev;
+wire dead_pulse = dead_s2 & ~dead_sync_prev;
+
+always @(posedge clk or posedge rst) begin
+  if (rst) begin
+    dead_sync_prev <= 1'b0;
+  end else begin
+    dead_sync_prev <= dead_s2;
+  end
+end
+
 
 
 //this divider ticks at 100Mhz, 100 million times per second
