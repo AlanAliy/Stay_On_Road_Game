@@ -27,7 +27,7 @@ module block_controller(
 	localparam GRAY1 =  12'b0110_0110_0110;
 	localparam GRAY2 =  12'b1001_1001_1001;
 	localparam GRAY3 =  12'b0100_0100_0100;
-	localparam GRAY4 =  12'b1110_1110_1110;
+	localparam GRAY4 =  12'b1100_1100_1100;
 	
 	localparam BLACK = 12'b0000_0000_0000;
 	
@@ -73,13 +73,21 @@ wire road_parts  = (hCount >= (XCENTER - 50)) && (hCount <= (XCENTER + 50));
 
 	always @(*) begin
 		if (!bright)
-		rgb = BLACK;
+			rgb = BLACK;
 		else if (block_fill)
-		rgb = RED;              // single pixel
-		else if (road_parts)
-		rgb = GRAY1;
-		else
-		rgb = GREEN1;
+			rgb = RED;              // single pixel
+		else if (road_parts) begin
+			case(hCount[3] ^ vCount[3])
+				1'd0: rgb = GRAY1;
+				1'd1: rgb = GRAY4;
+			endcase
+		end
+		else begin
+			case(hCount[3] ^ vCount[3])
+				1'd0: rgb = GREEN1;
+				1'd1: rgb = GREEN3;
+			endcase
+		end
 	end
 		//the +-5 for the positions give the dimension of the block (i.e. it will be 10x10 pixels)
 

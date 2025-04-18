@@ -22,7 +22,6 @@
 // Description: Port from NEXYS3 to NEXYS4
 //////////////////////////////////////////////////////////////////////////////////
 
-//!FIXME  for some reason the deathflag doesn't get registered inside timer_display.v
 //I though maybe it was a synchronization error but I can't quiet understand why it is not working.
 //the timer itself works fine but the timer does not reset, nor does it set a pr when you die.
 module vga_top(
