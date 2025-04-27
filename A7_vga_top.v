@@ -91,7 +91,8 @@ module vga_top(
 		.hCount(hc), 
 		.vCount(vc), 
 		.rgb(rgb), 
-		.deadFlag(deadFlag)
+		.deadFlag(deadFlag),
+		.fastClock(DIV_CLK)
 	);
 	assign vgaR = rgb[11:8];
   	assign vgaG = rgb[7:4];
