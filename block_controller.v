@@ -23,7 +23,16 @@ module block_controller(
     localparam BLACK = 12'h000;
     localparam GRAY1 = 12'h666, GRAY4 = 12'hFFF;
     localparam GREEN1 = 12'h0F0, GREEN3 = 12'h0A0;
-    localparam CAR_OUTSIDE_COLOR = 12'h0F0;   // pink key colour
+    localparam CAR_OUTSIDE_COLOR = 12'h0F0;   // pink key colourlocalparam SCREEN_MIN = 0;
+    
+    localparam SCREEN_MAX = 639;
+    localparam SCREEN_MIN = 0;
+    
+    localparam ROAD_HALF = 50;
+
+    localparam CAR_VELOCITY = 2
+
+
 
     //------------------------------------------------------------
     //  sprite position
@@ -61,7 +70,7 @@ module block_controller(
     reg         [2:0]  scriptPtr = 0;
     reg         [3:0]  vScroll  = 0;
 
-    // tiny ROM script
+    // tiny ROM script for movements of road
     reg  signed [4:0] delta_rom [0:3];
     reg         [8:0] rows_rom  [0:3];
 
@@ -114,27 +123,34 @@ module block_controller(
     //------------------------------------------------------------
     //  sequential logic
     //------------------------------------------------------------
+   
+    // for looping inside always block
     integer v;
+   
+   //variables for making sure road doesnt go offscreem
+    signed [10:0] newCenter = centerX + deltaX;
+    signed [10:0] newLeft   = newCenter - ROAD_HALF;
+    signed [10:0] newRight  = newCenter + ROAD_HALF;
+   
+   
     wire [9:0] carFrontY = ypos + CAR_H - 1;
-    always @(posedge clk) begin
+    
+    always @(posedge clk or posedge rst) begin
         if (rst) begin
-            // reset road edges
-            // for (v=0; v<480; v=v+1) begin
-            //     leftEdge [v] <= XCENTER - 50;
-            //     rightEdge[v] <= XCENTER + 50;
-            // end
-            // // xpos <= XCENTER - HALF_W;
-            // ypos <= YCENTER + 100;
-
-            deadFlag <= 1'b1;
-            
-			// centerX <= XCENTER;
-            // deltaX  <= 0;
-            // rowsLeft <= 0;
-            // scriptPtr <= 0;
-
-			// distance <= 0;
-  	        // level    <= 1;
+            for (v=0; v<480; v=v+1) begin
+                leftEdge [v] <= XCENTER - 50;
+                rightEdge[v] <= XCENTER + 50;
+            end
+            xpos <= XCENTER - HALF_W;
+            ypos <= YCENTER + 100;
+            deadFlag <= 1'b0;
+            centerX <= XCENTER;
+            deltaX  <= 0;
+            rowsLeft <= 0;
+            scriptPtr <= 0;
+			vScroll <= 0;
+			distance <= 0;
+  	        level    <= 1;
 			
 
         end else if (deadFlag) begin
@@ -151,14 +167,11 @@ module block_controller(
             rowsLeft <= 0;
             scriptPtr <= 0;
 			vScroll <= 0;
-
 			distance <= 0;
   	        level    <= 1;
         
         end else begin
-            //----------------------------------------------------
-            // (A) shift stored edges down 1 row every clock
-            //----------------------------------------------------
+            //each row gets shifted down by one to give idea of moving forward
             for (v=479; v>0; v=v-1) begin
                 leftEdge [v] <= leftEdge [v-1];
                 rightEdge[v] <= rightEdge[v-1];
@@ -167,11 +180,8 @@ module block_controller(
                 rightEdge[0] <= rightEdge[1];
 				
 
-            //----------------------------------------------------
-            // (B) new scan-line tasks (once each row)
-            //----------------------------------------------------
-
-            vScroll <= vScroll - 1; // insted of decrementing on every pixel clock, only do it once when you’ve finished a line
+            //to move down the hashed pixel squares at correct speed
+            vScroll <= vScroll - 1; 
 
 			if (hCount == 0) begin
 
@@ -204,28 +214,25 @@ module block_controller(
 				else
                     rowsLeft <= rowsLeft - 1;
 
-                centerX <= centerX + deltaX;
-                leftEdge [0] <= centerX - 50;
-                rightEdge[0] <= centerX + 50;
+               //detection for not getting off screen
+                if (newLeft  >= SCREEN_MIN && 
+                    newRight <= SCREEN_MAX) 
+                begin
+                centerX      <= newCenter;
+                leftEdge[0]  <= newLeft;
+                rightEdge[0] <= newRight;
+                end
             end
 
-            //----------------------------------------------------
-            // (C) car movement
-            //----------------------------------------------------
-            if (right)      xpos <= xpos + 2;
-            else if (left)  xpos <= xpos - 2;
+            //car movement mechanics
+            if (right)      xpos <= xpos + CAR_VELOCITY;
+            else if (left)  xpos <= xpos - CAR_VELOCITY;
 
-            //----------------------------------------------------
-            // (D) collision test
-            //----------------------------------------------------
+            //collision detection
             if ( (xpos + CAR_W -1) > rightEdge[carFrontY] ||
                  xpos              < leftEdge [carFrontY] )
                 deadFlag <= 1'b1;       
         end
     end
-
-    //------------------------------------------------------------
-    // helper for collision Y
-    //------------------------------------------------------------    
 
 endmodule
