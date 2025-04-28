@@ -21,7 +21,7 @@ module block_controller(
     localparam HALF_W = CAR_W >> 1;
 
     localparam BLACK = 12'h000;
-    localparam GRAY1 = 12'h666, GRAY4 = 12'hCCC;
+    localparam GRAY1 = 12'h666, GRAY4 = 12'hFFF;
     localparam GREEN1 = 12'h0F0, GREEN3 = 12'h0A0;
     localparam CAR_OUTSIDE_COLOR = 12'h0F0;   // pink key colour
 
@@ -67,9 +67,9 @@ module block_controller(
 
     initial begin
         delta_rom[0] =  5'sd0;  rows_rom[0] = 9'd10 ;   // straight 40 rows
-        delta_rom[1] =  8'sd3;  rows_rom[1] = 9'd18 ;   // sharp RIGHT      \
+        delta_rom[1] =  5'sd3;  rows_rom[1] = 9'd18 ;   // sharp RIGHT      \
         delta_rom[2] =  5'sd0;  rows_rom[2] = 9'd10 ;   // short straight    > hair-pin feel
-        delta_rom[3] = -8'sd3;  rows_rom[3] = 9'd18 ;   // sharp LEFTL
+        delta_rom[3] = -5'sd3;  rows_rom[3] = 9'd18 ;   // sharp LEFTL
     end
     
     localparam SCRIPT_LEN = 4;
@@ -115,23 +115,26 @@ module block_controller(
     //------------------------------------------------------------
     integer v;
     wire [9:0] carFrontY = ypos + CAR_H - 1;
-    always @(posedge clk or posedge rst) begin
+    always @(posedge clk) begin
         if (rst) begin
             // reset road edges
-            for (v=0; v<480; v=v+1) begin
-                leftEdge [v] <= XCENTER - 50;
-                rightEdge[v] <= XCENTER + 50;
-            end
-            xpos <= XCENTER - HALF_W;
-            ypos <= YCENTER + 100;
-            deadFlag <= 1'b0;
-            centerX <= XCENTER;
-            deltaX  <= 0;
-            rowsLeft <= 0;
-            scriptPtr <= 0;
+            // for (v=0; v<480; v=v+1) begin
+            //     leftEdge [v] <= XCENTER - 50;
+            //     rightEdge[v] <= XCENTER + 50;
+            // end
+            // // xpos <= XCENTER - HALF_W;
+            // ypos <= YCENTER + 100;
 
-			distance <= 0;
-  	        level    <= 1;
+            deadFlag <= 1'b1;
+            
+			// centerX <= XCENTER;
+            // deltaX  <= 0;
+            // rowsLeft <= 0;
+            // scriptPtr <= 0;
+
+			// distance <= 0;
+  	        // level    <= 1;
+			
 
         end else if (deadFlag) begin
             // same reset after crash
@@ -146,6 +149,7 @@ module block_controller(
             deltaX  <= 0;
             rowsLeft <= 0;
             scriptPtr <= 0;
+			vScroll <= 0;
 
 			distance <= 0;
   	        level    <= 1;
@@ -158,19 +162,23 @@ module block_controller(
                 leftEdge [v] <= leftEdge [v-1];
                 rightEdge[v] <= rightEdge[v-1];
             end
+				leftEdge [0] <= leftEdge [1];
+                rightEdge[0] <= rightEdge[1];
+				
 
             //----------------------------------------------------
             // (B) new scan-line tasks (once each row)
             //----------------------------------------------------
-            if (hCount == 0) begin
 
-				vScroll <= vScroll - 1; // insted of decrementing on every pixel clock, only do it once when you’ve finished a line
+            vScroll <= vScroll - 1; // insted of decrementing on every pixel clock, only do it once when you’ve finished a line
+
+			if (hCount == 0) begin
 
 				// —— DIFFICULTY UPDATE ——  
                // 1) increment distance by 1 row
                distance <= distance + 1;
                // 2) bump level every 200 rows (clamp at 8 for safety)
-               if (distance % 200 == 0 && level < 8)
+               if (distance % 56 == 0 && level < 8)
                    level <= level + 1;
 
                 if (rowsLeft == 0) begin
@@ -181,11 +189,10 @@ module block_controller(
                    deltaX <= delta_rom[scriptPtr] + (delta_rom[scriptPtr] > 0 ? level : (delta_rom[scriptPtr] < 0 ? -level : 0));
 
                 // 4) shorten how many rows each bend lasts
-                   rowsLeft <= (rows_rom[scriptPtr] > level*2)
-                               ? rows_rom[scriptPtr] - level*2
-                               : 1;     // never zero
+                   rowsLeft <= (rows_rom[scriptPtr] > level*2) ? rows_rom[scriptPtr] - level*2 : 1;     // never zero
 
-                    scriptPtr<= (scriptPtr==SCRIPT_LEN-1)? 0 : scriptPtr+1;
+                	scriptPtr<= (scriptPtr==SCRIPT_LEN-1)? 0 : scriptPtr+1;
+
                 end 
 				else
                     rowsLeft <= rowsLeft - 1;
@@ -212,7 +219,6 @@ module block_controller(
 
     //------------------------------------------------------------
     // helper for collision Y
-    //------------------------------------------------------------
-    
+    //------------------------------------------------------------    
 
 endmodule
