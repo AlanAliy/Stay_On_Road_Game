@@ -155,6 +155,15 @@ module block_controller(
   	        level    <= 1;
         
         end else begin
+            //----------------------------------------------------
+            // (A) shift stored edges down 1 row every clock
+            //----------------------------------------------------
+            for (v=479; v>0; v=v-1) begin
+                leftEdge [v] <= leftEdge [v-1];
+                rightEdge[v] <= rightEdge[v-1];
+            end
+				leftEdge [0] <= leftEdge [1];
+                rightEdge[0] <= rightEdge[1];
 				
 
             //----------------------------------------------------
@@ -164,32 +173,26 @@ module block_controller(
             vScroll <= vScroll - 1; // insted of decrementing on every pixel clock, only do it once when you’ve finished a line
 
 			if (hCount == 0) begin
-                
-                for (v=479; v>0; v=v-1) begin
-                    leftEdge [v] <= leftEdge [v-1];
-                    rightEdge[v] <= rightEdge[v-1];
-                end
-                
+
 				// —— DIFFICULTY UPDATE ——  
                // 1) increment distance by 1 row
                distance <= distance + 1;
                // 2) bump level every 200 rows (clamp at 8 for safety)
-                if (distance == 16'd56) begin
+               if (distance == 56) begin
                     distance <= 0;
                     if (level < 8)
-                        level <= level + 1;
-                end
+                        level <= level+1;
+               end
 
                 if (rowsLeft == 0) begin
+                    deltaX   <= delta_rom[scriptPtr];
+                    rowsLeft <= rows_rom [scriptPtr];
 
 				// 3) load the next script entry…
-                      deltaX    <= delta_rom[scriptPtr] 
-                                    + (delta_rom[scriptPtr] == 0 
-                                    ? 0 : (delta_rom[scriptPtr] > 0 ? level : -level));
+                    deltaX <= delta_rom[scriptPtr] + (delta_rom[scriptPtr] > 0 ? level : (delta_rom[scriptPtr] < 0 ? -level : 0));
 
                 // 4) shorten how many rows each bend lasts
-                      rowsLeft  <= (rows_rom[scriptPtr] > level*2)
-                                    ? rows_rom[scriptPtr] - level*2 : 1;     // never zero
+                    rowsLeft <= (rows_rom[scriptPtr] > level*2) ? rows_rom[scriptPtr] - level*2 : 1;     // never zero
 
                 	scriptPtr<= (scriptPtr==SCRIPT_LEN-1)? 0 : scriptPtr+1;
 
