@@ -67,9 +67,10 @@ module block_controller(
 
     initial begin
         delta_rom[0] =  5'sd0;  rows_rom[0] = 9'd10 ;   // straight 40 rows
-        delta_rom[1] =  5'sd3;  rows_rom[1] = 9'd18 ;   // sharp RIGHT      \
+        delta_rom[1] =  5'sd6;  rows_rom[1] = 9'd18 ;   // sharp RIGHT      \
         delta_rom[2] =  5'sd0;  rows_rom[2] = 9'd10 ;   // short straight    > hair-pin feel
-        delta_rom[3] = -5'sd3;  rows_rom[3] = 9'd18 ;   // sharp LEFTL
+        delta_rom[3] = -5'sd6;  rows_rom[3] = 9'd18 ;   // sharp LEFTL
+
     end
     
     localparam SCRIPT_LEN = 4;
@@ -185,14 +186,17 @@ module block_controller(
                end
 
                 if (rowsLeft == 0) begin
-                    deltaX   <= delta_rom[scriptPtr];
-                    rowsLeft <= rows_rom [scriptPtr];
+                    // deltaX   <= delta_rom[scriptPtr];
+                    // rowsLeft <= rows_rom [scriptPtr];
 
 				// 3) load the next script entry…
-                    deltaX <= delta_rom[scriptPtr] + (delta_rom[scriptPtr] > 0 ? level : (delta_rom[scriptPtr] < 0 ? -level : 0));
+                    deltaX <= delta_rom[scriptPtr] + (delta_rom[scriptPtr] > 0 ?
+                              level : (delta_rom[scriptPtr] < 0 ? -level : 0));
 
                 // 4) shorten how many rows each bend lasts
-                    rowsLeft <= (rows_rom[scriptPtr] > level*2) ? rows_rom[scriptPtr] - level*2 : 1;     // never zero
+                    rowsLeft <= rows_rom[scriptPtr];
+                    // > level*2) ? 
+                    //              rows_rom[scriptPtr] - level*2 : 1;     // never zero
 
                 	scriptPtr<= (scriptPtr==SCRIPT_LEN-1)? 0 : scriptPtr+1;
 
