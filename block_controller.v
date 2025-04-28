@@ -1,4 +1,5 @@
 `timescale 1ns / 1ps
+
 module block_controller(
     input  clk,                // pixel clock
     input  fastClock,          // ROM clock for car sprite
@@ -52,7 +53,7 @@ module block_controller(
     );
 
     //------------------------------------------------------------
-    //  road-centre state machine
+    //  road-centre state machine - scripted movement
     //------------------------------------------------------------
     reg  signed [10:0] centerX  = XCENTER;
     reg  signed [4:0]  deltaX   = 0;
@@ -63,6 +64,7 @@ module block_controller(
     // tiny ROM script
     reg  signed [4:0] delta_rom [0:3];
     reg         [8:0] rows_rom  [0:3];
+
     initial begin
         delta_rom[0] =  5'sd0;  rows_rom[0] = 9'd10 ;   // straight 40 rows
         delta_rom[1] =  8'sd3;  rows_rom[1] = 9'd18 ;   // sharp RIGHT      \
@@ -127,6 +129,10 @@ module block_controller(
             deltaX  <= 0;
             rowsLeft <= 0;
             scriptPtr <= 0;
+
+			distance <= 0;
+  	        level    <= 1;
+
         end else if (deadFlag) begin
             // same reset after crash
             for (v=0; v<480; v=v+1) begin
@@ -140,6 +146,10 @@ module block_controller(
             deltaX  <= 0;
             rowsLeft <= 0;
             scriptPtr <= 0;
+
+			distance <= 0;
+  	        level    <= 1;
+        
         end else begin
             //----------------------------------------------------
             // (A) shift stored edges down 1 row every clock
@@ -149,17 +159,35 @@ module block_controller(
                 rightEdge[v] <= rightEdge[v-1];
             end
 
-			vScroll <= vScroll - 1;
-
             //----------------------------------------------------
             // (B) new scan-line tasks (once each row)
             //----------------------------------------------------
             if (hCount == 0) begin
+
+				vScroll <= vScroll - 1; // insted of decrementing on every pixel clock, only do it once when you’ve finished a line
+
+				// —— DIFFICULTY UPDATE ——  
+               // 1) increment distance by 1 row
+               distance <= distance + 1;
+               // 2) bump level every 200 rows (clamp at 8 for safety)
+               if (distance % 200 == 0 && level < 8)
+                   level <= level + 1;
+
                 if (rowsLeft == 0) begin
                     deltaX   <= delta_rom[scriptPtr];
                     rowsLeft <= rows_rom [scriptPtr];
+
+				// 3) load the next script entry…
+                   deltaX <= delta_rom[scriptPtr] + (delta_rom[scriptPtr] > 0 ? level : (delta_rom[scriptPtr] < 0 ? -level : 0));
+
+                // 4) shorten how many rows each bend lasts
+                   rowsLeft <= (rows_rom[scriptPtr] > level*2)
+                               ? rows_rom[scriptPtr] - level*2
+                               : 1;     // never zero
+
                     scriptPtr<= (scriptPtr==SCRIPT_LEN-1)? 0 : scriptPtr+1;
-                end else
+                end 
+				else
                     rowsLeft <= rowsLeft - 1;
 
                 centerX <= centerX + deltaX;
