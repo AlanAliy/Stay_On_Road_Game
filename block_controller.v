@@ -10,9 +10,7 @@ module block_controller(
     output reg  [11:0] rgb,
     output reg  deadFlag = 0
 );
-    //------------------------------------------------------------
     //  constants / colours
-    //------------------------------------------------------------
     localparam XCENTER = 10'd464;
     localparam YCENTER = 10'd275;
 
@@ -25,26 +23,25 @@ module block_controller(
     localparam GREEN1 = 12'h0F0, GREEN3 = 12'h0A0;
     localparam CAR_OUTSIDE_COLOR = 12'h0F0;   // pink key colour
 
-    //------------------------------------------------------------
     //  sprite position
-    //------------------------------------------------------------
+    
     reg [9:0] xpos = XCENTER - HALF_W;
     reg [9:0] ypos = YCENTER + 10'd100;
 
-    //------------------------------------------------------------
     //  road-edge memories
-    //------------------------------------------------------------
+
     reg [9:0] leftEdge  [0:479];
     reg [9:0] rightEdge [0:479];
-	//------------------------------------------------------------
-	//  dynamic difficulty
-	//------------------------------------------------------------
-	reg [15:0] distance = 0;     // counts scan-lines survived
+	
+    //  dynamic difficulty
+	
+    reg [15:0] distance = 0;     // counts scan-lines survived
 	reg [3:0]  level    = 1;     // 1 .. 15   (scales the bend)
-    //------------------------------------------------------------
+    
     //  car sprite ROM
-    //------------------------------------------------------------
+    
     wire [11:0] carColor;
+    
     formula_car_rom fc (
         .clk        (fastClock),
         .color_data (carColor),
@@ -52,9 +49,8 @@ module block_controller(
         .col        (hCount - xpos)
     );
 
-    //------------------------------------------------------------
     //  road-centre state machine - scripted movement
-    //------------------------------------------------------------
+    
     reg  signed [10:0] centerX  = XCENTER;
     reg  signed [4:0]  deltaX   = 0;
     reg         [8:0]  rowsLeft = 0;
@@ -62,35 +58,31 @@ module block_controller(
     reg         [3:0]  vScroll  = 0;
 
     // tiny ROM script
+    
     reg  signed [4:0] delta_rom [0:12];
     reg         [8:0] rows_rom  [0:12];
 
     initial begin
-        //delta_rom[0] =  5'sd0;  rows_rom[0] = 9'd10 ;   // straight 40 rows
-        //delta_rom[1] =  5'sd5;  rows_rom[1] = 9'd18 ;   // sharp RIGHT      \
-        //delta_rom[2] =  5'sd0;  rows_rom[2] = 9'd10 ;   // short straight    > hair-pin feel
-        //delta_rom[3] = -5'sd5;  rows_rom[3] = 9'd18 ;   // sharp LEFTL
+
+        delta_rom[0] =  5'sd0;  rows_rom[0] = 9'd10 ;   // straight 10 rows
+        delta_rom[1] =  5'sd5;  rows_rom[1] = 9'd18 ;   // sharp RIGHT      \
+        delta_rom[2] =  5'sd0;  rows_rom[2] = 9'd10 ;   // straight    > hair-pin feel
+        delta_rom[3] = -5'sd5;  rows_rom[3] = 9'd18 ;   // sharp LEFTL
         
-        
-        delta_rom[0] =  5'sd0;  rows_rom[0] = 9'd10 ;   // straight 40 rows
-        delta_rom[1] =  5'sd7;  rows_rom[1] = 9'd18 ;   // sharp RIGHT      \
-        delta_rom[2] =  5'sd0;  rows_rom[2] = 9'd10 ;   // short straight    > hair-pin feel
-        delta_rom[3] = -5'sd7;  rows_rom[3] = 9'd18 ;   // sharp LEFTL
           
-        delta_rom[4] =  5'sd0;  rows_rom[4] = 9'd10 ;   // straight 40 rows
-        delta_rom[5] =  5'sd5;  rows_rom[5] = 9'd18 ;   // sharp RIGHT      \
-        delta_rom[6] = -5'sd6;  rows_rom[6] = 9'd30 ;   // short straight    > hair-pin feel
-        delta_rom[7] = 5'sd0;  rows_rom[7] = 9'd10 ;   // sharp LEFTL
-        delta_rom[8] = 5'sd6;  rows_rom[8] = 9'd15 ;   // sharp LEFTL
+        delta_rom[4] =  5'sd0;  rows_rom[4] = 9'd10 ;   // straight 10 rows
+        delta_rom[5] =  5'sd20;  rows_rom[5] = 9'd12 ;   // sharp RIGHT      \
+        delta_rom[6] = -5'sd20;  rows_rom[6] = 9'd12 ;   // sharp left    > hair-pin feel
+        delta_rom[7] =  5'sd20;   rows_rom[7] = 9'd12 ;   // sharp right
+        delta_rom[8] =  -5'sd20;  rows_rom[8] = 9'd12 ;   // sharp left
           
         
     end
     
     localparam SCRIPT_LEN = 9;
 
-    //------------------------------------------------------------
     //  helper wires
-    //------------------------------------------------------------
+    
     wire block_fill =
         (vCount >= ypos) &&
         (vCount <= ypos + CAR_H - 1) &&
@@ -101,9 +93,8 @@ module block_controller(
         (hCount >= leftEdge[vCount]) &&
         (hCount <= rightEdge[vCount]);
 
-    //------------------------------------------------------------
     //  RGB combinational mux
-    //------------------------------------------------------------
+    
     wire [10:0] hasher = vCount+vScroll;
     
     always @* begin
@@ -124,20 +115,19 @@ module block_controller(
         end
     end
 
-    //------------------------------------------------------------
     //  sequential logic
-    //------------------------------------------------------------
+
     integer v;
     wire [9:0] carFrontY = ypos + CAR_H - 1;
     always @(posedge clk or posedge rst) begin
         if (rst) begin
             // reset road edges
             for (v=0; v<480; v=v+1) begin
-                 leftEdge [v] <= XCENTER - 50;
-                 rightEdge[v] <= XCENTER + 50;
+                 leftEdge [v] <= XCENTER - 35;
+                 rightEdge[v] <= XCENTER + 35;
              end
              xpos <= XCENTER - HALF_W;
-             ypos <= YCENTER + 100;
+             ypos <= YCENTER + 70;
 
             deadFlag <= 1'b0;
             
@@ -154,8 +144,8 @@ module block_controller(
                else if (deadFlag) begin
             // same reset after crash
             for (v=0; v<480; v=v+1) begin
-                leftEdge [v] <= XCENTER - 50;
-                rightEdge[v] <= XCENTER + 50;
+                leftEdge [v] <= XCENTER - 35;
+                rightEdge[v] <= XCENTER + 35;
             end
             xpos <= XCENTER - HALF_W;
             ypos <= YCENTER + 100;
@@ -172,45 +162,34 @@ module block_controller(
   	   
         
         else begin
-            //----------------------------------------------------
+           
             // (A) shift stored edges down 1 row every clock
-            //----------------------------------------------------
+           
             for (v=479; v>0; v=v-1) begin
                 leftEdge [v] <= leftEdge [v-1];
                 rightEdge[v] <= rightEdge[v-1];
             end
             
-                
-				//leftEdge [0] <= leftEdge [1];
-               // rightEdge[0] <= rightEdge[1];
-				//leftEdge [479] <= leftEdge [478];
-                //rightEdge[479] <= rightEdge[478];
-				
-
-            //----------------------------------------------------
             // (B) new scan-line tasks (once each row)
-            //----------------------------------------------------
 
             vScroll <= vScroll - 1; // insted of decrementing on every pixel clock, only do it once when you’ve finished a line
 
 			if (hCount == 0) begin
 
-				// —— DIFFICULTY UPDATE ——  
+				//  DIFFICULTY  
                // 1) increment distance by 1 row
                distance <= distance + 1;
-               // 2) bump level every 200 rows (clamp at 8 for safety)
-               if (distance == 14) begin
+               // 2) bump level every 14 rows (clamp at 8 for safety)
+               if (distance == 114) begin
                     distance <= 0;
                     if (level < 8)
                         level <= level+1;
                end
 
                 if (rowsLeft == 0) begin
-//                    deltaX   <= delta_rom[scriptPtr];
-  //                  rowsLeft <= rows_rom [scriptPtr];
 
 				// 3) load the next script entry…
-                    deltaX <= delta_rom[scriptPtr] + (delta_rom[scriptPtr] > 0 ? level : (delta_rom[scriptPtr] < 0 ? -level : 0));
+                    deltaX <= delta_rom[scriptPtr] + (delta_rom[scriptPtr] > 0 ? level*8 : (delta_rom[scriptPtr] < 0 ? -level*8 : 0));
 
                 // 4) shorten how many rows each bend lasts
                     rowsLeft <= rows_rom [scriptPtr];
@@ -223,27 +202,21 @@ module block_controller(
                     rowsLeft <= rowsLeft - 1;
 
                 centerX <= centerX + deltaX;
-                leftEdge [0] <= centerX - 50;
-                rightEdge[0] <= centerX + 50;
+                leftEdge [0] <= centerX - 35;
+                rightEdge[0] <= centerX + 35;
             end
 
-            //----------------------------------------------------
             // (C) car movement
-            //----------------------------------------------------
+
             if (right)      xpos <= xpos + 2;
             else if (left)  xpos <= xpos - 2;
 
-            //----------------------------------------------------
             // (D) collision test
-            //----------------------------------------------------
-            if ( (xpos + CAR_W -5) > rightEdge[carFrontY] ||
+
+            if ( (xpos + CAR_W -10) > rightEdge[carFrontY] ||
                  xpos + 5              < leftEdge [carFrontY] )
                 deadFlag <= 1'b1;       
         end
     end
-
-    //------------------------------------------------------------
-    // helper for collision Y
-    //------------------------------------------------------------    
 
 endmodule
